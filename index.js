@@ -1,5 +1,4 @@
-var request = require('request'),
-q = require('yapl');
+var request = require('request');
 
 module.exports = EXPA;
 
@@ -17,10 +16,8 @@ function EXPA(username, password, enforceSSL){
 	_baseUrl = 'https://gis-api.aiesec.org/v2',
 	_token;
 
-	var tokenRequest = function(){
-		var deferred = q();
-		
-		r.get('https://experience.aiesec.org/auth', (error, response, body) => {
+	var tokenRequest = () => new Promise((resolve, reject) => {
+    r.get('https://experience-v2.aiesec.org/auth', (error, response, body) => {
 			var match = body.match('<meta.*content="(.*)".*name="csrf-token"');
 
 			r.post({
@@ -33,21 +30,19 @@ function EXPA(username, password, enforceSSL){
 				}
 			}, function(error, response, body){
 				if(error) {
-					deferred.reject(error);
+					reject(error);
 				} else {
 					if(body.indexOf('<h2>Invalid email or password.') > -1){
-						deferred.reject('Invalid email or password');
+						reject('Invalid email or password');
 					} else {
 						response.body = body;
-						deferred.resolve(response);
+						resolve(response);
 					}
 				}
 			});
 
 		});
-
-		return deferred;
-	};
+	});
 
 	 _.getNewToken = function() {
 		return tokenRequest().then((response) => {
@@ -60,14 +55,13 @@ function EXPA(username, password, enforceSSL){
 
 	 _.getToken = function(){
 	 	if(_token) {
-	 		return q().resolve(_token);
+	 		return Promise.resolve(_token);
 	 	} else {
 	 		return _.getNewToken();
 	 	}
 	 };
 
-	_.request = function(uri, options){
-		var deferred = q();
+	_.request = (uri, options) => new Promise((resolve, reject) => {
 		var params = {};
 		if (typeof options === 'object') {
 			Object.assign(params, options, {uri: uri});
@@ -81,7 +75,7 @@ function EXPA(username, password, enforceSSL){
 
 		params.callback = function(err, resp, body){
 			if(err) {
-				deferred.reject(err);
+				reject(err);
 			} else {
 				try{
 					var json = JSON.parse(body);
@@ -89,14 +83,14 @@ function EXPA(username, password, enforceSSL){
 						//if token expired, get new one and retry
 						_.getNewToken().then(function(){
 							_.request(uri, options)
-							.then(deferred.resolve)
-							.catch(deferred.reject);
+							.then(resolve)
+							.catch(reject);
 						});
 					} else {
-						deferred.resolve(json);
+						resolve(json);
 					}
 				} catch(e) {
-					deferred.resolve(body);
+					resolve(body);
 				}
 				
 			}
@@ -105,10 +99,8 @@ function EXPA(username, password, enforceSSL){
 		_.getToken().then(function(token){
 			params.uri += `?access_token=${token}`;
 			r(params);
-		}, deferred.reject);
-
-		return deferred;
-	};
+		}, reject);
+	});
 
 	_.get = function(url, data){
 		return _.request(url, {
