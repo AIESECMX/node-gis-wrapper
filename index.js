@@ -14,6 +14,7 @@ function EXPA(username, password, enforceSSL){
 
 	var _ = {},
 	_baseUrl = 'https://gis-api.aiesec.org/v2',
+	_graphqlUrl = 'https://gis-api.aiesec.org/graphql',
 	_token;
 
 	var tokenRequest = () => new Promise((resolve, reject) => {
@@ -121,6 +122,13 @@ function EXPA(username, password, enforceSSL){
 			form: data
 		});
 	};
+
+	_.graphql = function(query, variables){
+		return _.post(_graphqlUrl, {
+			query,
+			variables,
+		}).then(body => body.data);
+	}
 
 	return _;
 }
