@@ -127,7 +127,10 @@ function EXPA(username, password, enforceSSL){
 		return _.post(_graphqlUrl, {
 			query,
 			variables,
-		}).then(body => body.data);
+		}).then((body) => {
+			if (body.errors) throw body.errors;
+			return body.data;
+		}).catch((err) => { throw err; });
 	}
 
 	return _;
