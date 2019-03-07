@@ -54,6 +54,10 @@ function EXPA(username, password, enforceSSL){
 	 	});
 	};
 
+	_.setToken = function(token) {
+		_token = token;
+	}
+
 	 _.getToken = function(){
 	 	if(_token) {
 	 		return Promise.resolve(_token);
